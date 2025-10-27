@@ -12,23 +12,23 @@ Cobrir, com exemplos práticos, de **fundamentos a tópicos profissionais**: con
 
 ## 🧩 Escopo por Nível
 
-### 🔹 Nível 1 — Básico (Fundamentos)
+### 🔹 Básico (Fundamentos)
 
 SELECT / FROM • projeção de colunas • DISTINCT • WHERE • AND/OR/NOT • ORDER BY • INSERT • UPDATE • DELETE • NULL (IS/IS NOT) • LIMIT/TOP
 
-### 🔹 Nível 2 — Intermediário (Agregações e Filtros)
+### 🔹 Intermediário (Agregações e Filtros)
 
 Agregações (COUNT/SUM/AVG/MIN/MAX) • GROUP BY • HAVING • LIKE (%/_) • BETWEEN/IN • aliases (AS) • `CASE WHEN`
 
-### 🔹 Nível 3 — Joins e Subconsultas
+### 🔹 Joins e Subconsultas
 
 INNER/LEFT/RIGHT/FULL/SELF • UNION/UNION ALL • subconsultas em SELECT/FROM/WHERE • comparações com subquery • EXISTS/ANY/ALL
 
-### 🔹 Nível 4 — Avançado (Otimização e Datas)
+### 🔹 Avançado (Otimização e Datas)
 
 CREATE/DROP DATABASE • CREATE/ALTER TABLE • constraints (NOT NULL, UNIQUE, PK, FK, CHECK, DEFAULT) • índices e performance • datas (DATE/DATETIME, EXTRACT/DATE_PART/AGE) • VIEW • `INSERT INTO ... SELECT` • funções janela (ROW_NUMBER/RANK/LAG/LEAD com OVER/PARTITION BY) • CTEs (`WITH ... AS`)
 
-### 🔹 Nível 5 — Ultra-Avançado (Profissional e Otimização)
+### 🔹 Ultra-Avançado (Profissional e Otimização)
 
 Stored Procedures/Functions • Triggers • Transações (BEGIN/COMMIT/ROLLBACK) • concorrência/LOCK/níveis de isolamento • segurança (GRANT/REVOKE) • SQL Injection (prevenção) • EXPLAIN/ANALYZE • índices compostos/particionamento • data types específicos do SGBD • modelagem (1FN/2FN/3FN) e desnormalização (BI)
 
