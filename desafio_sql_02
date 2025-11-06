@@ -1,0 +1,133 @@
+/**********************************************************************************************
+🎯 TRILHA DE EXERCÍCIOS — SQL PARA ANÁLISE DE DADOS (PostgreSQL)
+  - Tópicos: INNER/LEFT/RIGHT JOIN, filtros sargáveis, DISTINCT, agregações
+
+📝 Notas rápidas para avaliação:
+  • Use sempre aliases curtos e consistentes: a=autores, l=livros, lv=livros_vendidos.
+  • Prefira filtros sargáveis (evite função na coluna quando possível).
+  • Quando o enunciado pedir “vendidos”, ancore em livros_vendidos (INNER JOIN).
+  • Para “incluir quem não tem…”, mude a tabela âncora e use LEFT JOIN.
+
+-- ============================================================================================
+-- 🧩 NÍVEL 1 — FUNDAMENTOS E RECUPERAÇÃO DE DADOS
+-- ============================================================================================
+
+/*--------------------------------------------------------------------------------------------
+Exercício 1
+Enunciado: Liste todos os livros vendidos e seus respectivos autores.
+Interpretação: “vendidos” implica existir registro em cap08.livros_vendidos,
+logo usamos INNER JOINs (apenas quem tem venda aparece).
+--------------------------------------------------------------------------------------------*/
+SELECT
+    a.nome            AS autor,
+    l.titulo          AS titulo
+FROM cap08.livros_vendidos AS lv           -- âncora: somente registros com venda
+INNER JOIN cap08.autores AS a
+    ON a.id_autor = lv.id_autor
+INNER JOIN cap08.livros AS l
+    ON l.id_livro = lv.id_livro
+ORDER BY a.nome, l.titulo;
+
+-- Variante (evitar duplicatas do mesmo par autor×livro, se houver múltiplas vendas):
+-- SELECT DISTINCT a.nome AS autor, l.titulo AS titulo
+-- FROM cap08.livros_vendidos lv
+-- JOIN cap08.autores a ON a.id_autor = lv.id_autor
+-- JOIN cap08.livros  l ON l.id_livro = lv.id_livro
+-- ORDER BY a.nome, l.titulo;
+
+
+/*--------------------------------------------------------------------------------------------
+Exercício 2
+Enunciado: Liste todos os autores e seus respectivos livros, incluindo autores que não têm
+livros cadastrados (ou sem vendas associadas).
+
+Interpretação: todos os autores devem aparecer → autores é a âncora (FROM autores)
+e os relacionamentos são LEFT JOIN.
+--------------------------------------------------------------------------------------------*/
+SELECT
+    a.nome AS autor,
+    COALESCE(l.titulo, 'Livro não cadastrado') AS titulo
+FROM cap08.autores AS a                      -- âncora: todos os autores
+LEFT JOIN cap08.livros_vendidos AS lv
+    ON a.id_autor = lv.id_autor              -- mantém o autor mesmo sem vendas
+LEFT JOIN cap08.livros AS l
+    ON lv.id_livro = l.id_livro              -- tenta trazer o título; se não houver, NULL
+ORDER BY a.nome, l.titulo NULLS LAST;
+
+-- Observações:
+-- • Se houver múltiplas vendas do mesmo livro, você pode ver duplicatas.
+--   Para deduplicar pares (autor, título):
+--   SELECT DISTINCT a.nome, COALESCE(l.titulo, 'Livro não cadastrado') ...
+-- • Para contar vendas por (autor, livro), adicione COUNT(*) e GROUP BY nas colunas cruas.
+
+
+/*--------------------------------------------------------------------------------------------
+Exercício 3
+Enunciado: Liste todos os livros e seus respectivos autores, incluindo livros que não têm
+autores cadastrados/associados (via vendas).
+
+Interpretação: todos os livros devem aparecer → livros é a âncora; autor entra se houver
+venda relacionada → LEFT JOINs a partir de livros.
+--------------------------------------------------------------------------------------------*/
+SELECT DISTINCT
+    COALESCE(a.nome, 'Autor não cadastrado') AS autor,
+    l.titulo                                  AS titulo
+FROM cap08.livros AS l                        -- âncora: todos os livros
+LEFT JOIN cap08.livros_vendidos AS lv
+    ON lv.id_livro = l.id_livro
+LEFT JOIN cap08.autores AS a
+    ON a.id_autor = lv.id_autor
+ORDER BY autor, l.titulo;
+
+-- Observação: DISTINCT evita múltiplas linhas para o mesmo par (autor, livro)
+-- quando houver várias vendas.
+
+
+/*--------------------------------------------------------------------------------------------
+Exercício 4
+Enunciado: Liste os autores que nasceram antes de 1970 e os livros que eles escreveram.
+
+Interpretação: filtramos autores (< 1970) e mostramos apenas livros com venda registrada.
+Para performance, use filtro sargável em data_nascimento.
+--------------------------------------------------------------------------------------------*/
+SELECT
+    a.nome AS autor,
+    EXTRACT(YEAR FROM a.data_nascimento) AS ano_nascimento,
+    l.titulo AS titulo
+FROM cap08.livros_vendidos AS lv
+INNER JOIN cap08.autores AS a
+    ON a.id_autor = lv.id_autor
+INNER JOIN cap08.livros AS l
+    ON l.id_livro = lv.id_livro
+WHERE a.data_nascimento < DATE '1970-01-01'           -- sargável (usa índice em data_nascimento)
+ORDER BY a.nome, l.titulo;
+
+-- Observação:
+-- • Evite WHERE EXTRACT(YEAR FROM a.data_nascimento) < 1970, pois aplica função na coluna
+--   e pode impedir uso de índice.
+-- • Se quiser deduplicar (autor, livro), use DISTINCT.
+
+
+/*--------------------------------------------------------------------------------------------
+Exercício 5
+Enunciado: Liste os livros publicados após 2017, incluindo os que não têm autores associados.
+
+Interpretação: todos os livros com ano_publicacao > 2017 devem aparecer → livros é a âncora,
+e os autores entram via vendas se houver. Se ano_publicacao for INTEGER, compare como número.
+--------------------------------------------------------------------------------------------*/
+SELECT
+  COALESCE(a.nome, 'Autor não cadastrado') AS autor,
+  l.titulo,
+  l.ano_publicacao
+FROM cap08.livros AS l                        -- âncora: todos os livros
+LEFT JOIN cap08.livros_vendidos AS lv
+  ON lv.id_livro = l.id_livro
+LEFT JOIN cap08.autores AS a
+  ON a.id_autor = lv.id_autor
+WHERE l.ano_publicacao > 2017                 -- sargável (se INTEGER)
+ORDER BY l.titulo;
+
+-- Se l.ano_publicacao for DATE/TIMESTAMP, prefira:
+-- WHERE l.ano_publicacao >= DATE '2018-01-01'
+
+ 
