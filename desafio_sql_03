@@ -1,0 +1,229 @@
+/**********************************************************************************************
+🎯 TRILHA DE EXERCÍCIOS — SQL PARA ANÁLISE (PostgreSQL)
+Tabelas: clientes (C), pedidos (P), produtos (PR)
+Aliases sugeridos: C = clientes, P = pedidos, PR = produtos
+Dicas: preferir filtros sargáveis em datas; escolher âncora conforme o enunciado; usar DISTINCT quando houver possível duplicidade.
+**********************************************************************************************/
+
+-- ============================================================================================
+-- 🧩 NÍVEL 1 — FUNDAMENTOS (JOINs, DISTINCT, filtros básicos)
+-- ============================================================================================
+
+/*--------------------------------------------------------------------------------------------
+Exercício 1 — Pedidos com cliente e produto
+Enunciado: Liste todos os pedidos com nome do cliente e nome do produto.
+Interpretação: “pedidos” implica existir em P → âncora em P com INNER JOIN em C e PR. Ordene por data.
+--------------------------------------------------------------------------------------------*/
+-- SUA QUERY AQUI:
+
+-- Seleciona as colunas desejadas das tabelas cliente, produto e pedido
+select
+    tab_cliente.nome_cliente,     -- Nome do cliente
+    tab_produto.nome_produto,     -- Nome do produto
+    tab_pedido.id_pedido,         -- Código/ID do pedido
+    tab_pedido.data_pedido,       -- Data em que o pedido foi realizado
+    tab_pedido.valor_pedido       -- Valor total do pedido
+-- Define a tabela principal da consulta (clientes)
+from cap09.clientes as tab_cliente
+-- Faz o INNER JOIN com a tabela de pedidos,
+-- relacionando cliente -> pedido (id do cliente)
+inner join cap09.pedidos as tab_pedido
+    on tab_cliente.id_cli = tab_pedido.id_cliente
+-- Faz o INNER JOIN com a tabela de produtos,
+-- relacionando pedido -> produto (id do produto)
+inner join cap09.produtos as tab_produto
+    on tab_produto.id_prod = tab_pedido.id_produto;
+
+
+
+
+/*--------------------------------------------------------------------------------------------
+Exercício 2 — Todos os clientes, mesmo sem pedido
+Enunciado: Liste todos os clientes e o id do pedido (se houver).
+Interpretação: todos os clientes devem aparecer → âncora em C + LEFT JOIN em P. Trate NULL como “sem pedido”.
+--------------------------------------------------------------------------------------------*/
+-- SUA QUERY AQUI:
+select
+    tab_cliente.nome_cliente,  -- Nome do cliente
+    -- Se o produto não existir (caso não haja pedido), retorna 'Sem produto'
+    COALESCE(tab_produto.nome_produto, 'Sem produto') as nome_produto,
+    -- Se o ID do pedido for nulo, retorna 0
+    COALESCE(tab_pedido.id_pedido, 0) as id_pedido,
+    -- Tratamento especial para a data:
+    -- Se não houver data (NULL), retorna 'Sem data'.
+    -- Caso exista, converte a data para texto no formato YYYY-MM-DD.
+    CASE 
+        WHEN tab_pedido.data_pedido IS NULL THEN 'Sem data'
+        ELSE to_char(tab_pedido.data_pedido, 'YYYY-MM-DD')
+    END AS data_pedido_info,
+    -- Se o valor do pedido estiver NULL, retorna 0
+    COALESCE(tab_pedido.valor_pedido, 0) as valor_pedido
+-- Define a tabela principal da consulta:
+-- Todos os clientes serão retornados, independentemente de terem realizado pedidos.
+from cap09.clientes as tab_cliente
+-- LEFT JOIN: traz os pedidos quando existirem.
+-- Caso o cliente não tenha pedido, os campos do pedido virão como NULL.
+left join cap09.pedidos as tab_pedido
+    on tab_cliente.id_cli = tab_pedido.id_cliente
+-- LEFT JOIN: traz informações do produto vinculado ao pedido.
+-- Se não houver pedido ou produto, as colunas virão como NULL.
+left join cap09.produtos as tab_produto
+    on tab_produto.id_prod = tab_pedido.id_produto
+-- Organiza o resultado pela ordem alfabética do nome do cliente
+order by nome_cliente;
+
+
+
+/*--------------------------------------------------------------------------------------------
+Exercício 3 — Par cliente×produto vendido (sem duplicar)
+Enunciado: Traga os pares (cliente, produto) que já tiveram pelo menos uma venda, sem duplicatas.
+Interpretação: base em P; deduplicar com DISTINCT se houver múltiplos pedidos do mesmo par.
+--------------------------------------------------------------------------------------------*/
+-- SUA QUERY AQUI:
+select
+    distinct tab_cliente.nome_cliente,   -- DISTINCT: remove linhas duplicadas considerando TODAS as colunas selecionadas.
+                                         -- Ou seja, só elimina duplicatas se nome_cliente, nome_produto e id_pedido 
+                                         -- forem iguais na mesma linha.
+    tab_produto.nome_produto,            -- Nome do produto associado ao pedido
+    tab_pedido.id_pedido                 -- ID do pedido realizado pelo cliente
+-- Tabela principal da consulta: clientes
+from cap09.clientes as tab_cliente
+-- INNER JOIN com pedidos:
+-- Retorna apenas clientes que têm pedidos registrados.
+inner join cap09.pedidos as tab_pedido
+    on tab_cliente.id_cli = tab_pedido.id_cliente
+-- INNER JOIN com produtos:
+-- Retorna apenas pedidos que têm um produto associado.
+inner join cap09.produtos as tab_produto
+    on tab_produto.id_prod = tab_pedido.id_produto
+-- Ordena o resultado final pelo nome do cliente
+order by tab_cliente.nome_cliente;
+
+
+
+/*--------------------------------------------------------------------------------------------
+Exercício 4 — Pedidos por intervalo de datas (sargável)
+Enunciado: Liste pedidos (com cliente e produto) entre duas datas específicas (inclusive).
+Interpretação: filtro sargável em P.data_pedido usando >= e <=; evitar função na coluna.
+--------------------------------------------------------------------------------------------*/
+-- SUA QUERY AQUI:
+/*
+
+
+
+*/
+
+-- ============================================================================================
+-- 🧩 NÍVEL 2 — AGREGAÇÕES, ORDENAÇÃO INTELIGENTE, ANTI-JOIN
+-- ============================================================================================
+
+/*--------------------------------------------------------------------------------------------
+Exercício 5 — Média do valor por cidade (incluindo sem pedidos)
+Enunciado: Calcule a média de valor_pedido por cidade, incluindo cidades sem pedidos (mostrar “Não Houve Pedido”).
+Interpretação: manter todas as cidades → âncora C + LEFT JOIN P; CASE na projeção e regra de ordenação (quem tem média vem antes).
+--------------------------------------------------------------------------------------------*/
+-- SUA QUERY AQUI:
+/*
+
+
+
+*/
+
+/*--------------------------------------------------------------------------------------------
+Exercício 6 — Soma de vendas por estado (filtro IN)
+Enunciado: Traga a soma de valor_pedido por estado do cliente, apenas para um conjunto específico (ex.: RJ e SP).
+Interpretação: JOIN C×P e WHERE estado_cliente IN (...); ordenar do maior para o menor.
+--------------------------------------------------------------------------------------------*/
+-- SUA QUERY AQUI:
+/*
+
+
+
+*/
+
+/*--------------------------------------------------------------------------------------------
+Exercício 7 — Clientes sem nenhum pedido (anti-join)
+Enunciado: Liste apenas os clientes que nunca fizeram pedido.
+Interpretação: NOT EXISTS contra P para detectar ausência de pedidos por cliente.
+--------------------------------------------------------------------------------------------*/
+-- SUA QUERY AQUI:
+/*
+
+
+
+*/
+
+/*--------------------------------------------------------------------------------------------
+Exercício 8 — Ticket médio por estado (zeros para ausência)
+Enunciado: Calcule o ticket médio (AVG(valor_pedido)) por estado, exibindo 0 quando não houver vendas.
+Interpretação: preservar todos os estados (C como base) com JOIN apropriado e COALESCE/CASE para substituir NULL por 0.
+--------------------------------------------------------------------------------------------*/
+-- SUA QUERY AQUI:
+/*
+
+
+
+*/
+
+-- ============================================================================================
+-- 🧩 NÍVEL 3 — COMPOSIÇÕES, TOP N, DEDUP E DATAWARENESS
+-- ============================================================================================
+
+/*--------------------------------------------------------------------------------------------
+Exercício 9 — Produtos e número de pedidos (inclua produtos sem pedido)
+Enunciado: Liste cada produto e o nº de pedidos associados; produtos sem pedido devem aparecer com contagem 0.
+Interpretação: âncora PR + LEFT JOIN P; COUNT de P.id_pedido e COALESCE; ordenar por contagem desc.
+--------------------------------------------------------------------------------------------*/
+-- SUA QUERY AQUI:
+/*
+
+
+
+*/
+
+/*--------------------------------------------------------------------------------------------
+Exercício 10 — Top 3 cidades por volume vendido
+Enunciado: Traga as 3 cidades com maior soma de valor_pedido.
+Interpretação: JOIN C×P, agregação por cidade, ORDER BY SUM(...) DESC e LIMIT 3.
+--------------------------------------------------------------------------------------------*/
+-- SUA QUERY AQUI:
+/*
+
+
+
+*/
+
+/*--------------------------------------------------------------------------------------------
+Exercício 11 — Receita por produto e ano (sargável)
+Enunciado: Some o valor_pedido por produto para um determinado ano (ex.: 2024), mostrando produto e total.
+Interpretação: filtro sargável por faixa de data (ex.: >= '2024-01-01' e < '2025-01-01'); evitar EXTRACT na coluna.
+--------------------------------------------------------------------------------------------*/
+-- SUA QUERY AQUI:
+/*
+
+
+
+*/
+
+/*--------------------------------------------------------------------------------------------
+Exercício 12 — Clientes “ativos” no período (DISTINCT)
+Enunciado: Liste os clientes que fizeram pelo menos 1 pedido em um período; não repita cliente.
+Interpretação: base em P; filtrar por data sargável; projetar cliente com DISTINCT.
+--------------------------------------------------------------------------------------------*/
+-- SUA QUERY AQUI:
+/*
+
+
+
+*/
+
+-- ============================================================================================
+-- ✅ CHECKLIST RÁPIDO PARA CADA SOLUÇÃO
+-- • Usou a âncora correta? (quem “tem que aparecer” fica no FROM)
+-- • O filtro de data está sargável (faixa com >= / < ou <=)?
+-- • Precisava DISTINCT para evitar duplicação?
+-- • Ordenação está coerente com o enunciado (e com NULLS FIRST/LAST se necessário)?
+-- • Funções em colunas indexadas foram evitadas no WHERE?
+-- • CASE/COALESCE para apresentar “Não Houve Pedido” ou 0 quando pedido ausente?
+-- ============================================================================================
+```
