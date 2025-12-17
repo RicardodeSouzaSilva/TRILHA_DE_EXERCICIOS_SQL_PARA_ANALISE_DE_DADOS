@@ -236,3 +236,58 @@ order by
     -- Ordena os resultados do maior para o menor custo total.
     -- Facilita identificar rapidamente os estados com maior impacto de custo.
     custo_total desc;
+
+
+/*--------------------------------------------------------------------------------------------
+Exercício 7 — Ajuste de custo para produtos vendidos a clientes do estado de SP
+
+Enunciado:
+A tabela de dados está desatualizada e os produtos vendidos para clientes
+do estado de São Paulo (SP) tiveram aumento de custo de 10%.
+Como demonstrar esse ajuste no relatório sem modificar os dados na tabela?
+
+Interpretação Analítica:
+- Os dados originais não devem ser alterados (sem UPDATE)
+- O ajuste de custo deve ser aplicado apenas no momento da consulta
+- A regra de negócio depende da localização do cliente (estado = 'SP')
+- O cálculo deve refletir um aumento de 10% no custo dos produtos vendidos
+--------------------------------------------------------------------------------------------*/
+SELECT
+    -- Estado do cliente.
+    -- Define o nível de agregação da análise (granularidade geográfica).
+    tabela_cliente.estado_cliente,
+    -- Cálculo do custo total dos produtos por estado.
+    -- A função SUM realiza a agregação dos custos dos produtos.
+    -- O CASE aplica uma regra condicional antes da agregação:
+    --  - Se o estado do cliente for 'SP', o custo do produto recebe um acréscimo de 10%.
+    --  - Caso contrário, o custo original do produto é mantido.
+    -- O ROUND é aplicado ao resultado final da soma para limitar o valor
+    -- a duas casas decimais, padrão comum em relatórios financeiros.
+    ROUND(SUM(
+            CASE
+                WHEN tabela_cliente.estado_cliente = 'SP' THEN tabela_produto.custo * 1.10
+                ELSE tabela_produto.custo
+            END
+        ),2) AS custo_total
+FROM cap10.clientes AS tabela_cliente
+    -- Tabela base da consulta (dimensão clientes).
+    -- Contém a informação de estado, usada para o agrupamento.
+INNER JOIN cap10.pedidos AS tabela_pedido
+    -- INNER JOIN garante que apenas clientes que realizaram pedidos
+    -- sejam considerados na análise.
+    -- Relaciona clientes aos seus respectivos pedidos.
+    ON tabela_cliente.id_cli = tabela_pedido.id_cliente
+INNER JOIN cap10.produtos AS tabela_produto
+    -- INNER JOIN conecta os pedidos aos produtos comprados.
+    -- Permite acessar o custo de cada produto para o cálculo do total.
+    ON tabela_pedido.id_produto = tabela_produto.id_prod
+GROUP BY
+    -- Agrupamento por estado do cliente.
+    -- Necessário porque a query utiliza função de agregação (SUM).
+    tabela_cliente.estado_cliente
+ORDER BY
+    -- Ordena o resultado pelo custo total em ordem decrescente.
+    -- Facilita a identificação dos estados com maior impacto de custo.
+    custo_total DESC;
+
+
