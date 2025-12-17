@@ -210,5 +210,29 @@ Interpretação Analítica:
 - Métrica principal: soma do custo/valor dos pedidos
 - Análise agregada para comparação regional
 --------------------------------------------------------------------------------------------*/
-
-
+select
+    -- Estado do cliente.
+    -- Esta coluna define o nível de agregação da análise (granularidade geográfica).
+    tabela_cliente.estado_cliente,
+    -- Soma do custo dos produtos associados aos pedidos.
+    -- A função SUM agrega o custo de todos os produtos vendidos em cada estado.
+    sum(tabela_produto.custo) as custo_total
+from cap10.clientes as tabela_cliente
+    -- Tabela base da análise (dimensão cliente).
+    -- Cada cliente está associado a um estado, que será usado para agrupar os dados.
+inner join cap10.pedidos as tabela_pedido
+    -- INNER JOIN garante que apenas clientes com pedidos sejam considerados.
+    -- Relaciona clientes aos seus respectivos pedidos.
+    on tabela_cliente.id_cli = tabela_pedido.id_cliente
+inner join cap10.produtos as tabela_produto
+    -- INNER JOIN conecta os pedidos aos produtos comprados.
+    -- Permite acessar o custo do produto para cálculo do total.
+    on tabela_pedido.id_produto = tabela_produto.id_prod
+group by
+    -- Agrupamento por estado do cliente.
+    -- Necessário porque estamos usando uma função de agregação (SUM).
+    tabela_cliente.estado_cliente
+order by
+    -- Ordena os resultados do maior para o menor custo total.
+    -- Facilita identificar rapidamente os estados com maior impacto de custo.
+    custo_total desc;
