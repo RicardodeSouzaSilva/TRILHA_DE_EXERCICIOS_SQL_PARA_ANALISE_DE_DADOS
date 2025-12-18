@@ -509,4 +509,104 @@ ORDER BY
     -- do maior para o menor valor.
     custo_total DESC;
  
+/*--------------------------------------------------------------------------------------------
+Exercício 11 — Custo total dos pedidos por estado com regras condicionais de custo
+
+Enunciado:
+Qual é o custo total dos pedidos por estado considerando apenas
+produtos cujo título contenha as palavras 'Análise' ou 'Apache',
+somente quando o custo total estiver entre 150.000 e 250.000?
+Além disso, como demonstrar no relatório, sem modificar os dados da tabela,
+um aumento de 10% no custo para pedidos realizados por clientes do estado
+de São Paulo (SP)?
+Por fim, incluir no relatório uma coluna chamada status_aumento,
+exibindo o texto 'Com Aumento de Custo' para o estado de SP
+e 'Sem Aumento de Custo' para os demais estados.
+
+Interpretação Analítica:
+- Pedidos são a tabela fato da análise
+- Estado do cliente é a dimensão de agrupamento
+- Produtos devem ser filtrados pelo nome (título)
+- Considerar apenas produtos cujo título contenha 'Análise' ou 'Apache'
+- O intervalo de custo total (150.000 a 250.000) deve ser aplicado após a agregação
+- O aumento de 10% no custo deve ser calculado somente na consulta (sem UPDATE)
+- A criação da coluna status_aumento deve ser feita via lógica condicional
+- A regra de negócio depende do estado do cliente (SP)
+--------------------------------------------------------------------------------------------*/
+SELECT
+    -- Estado do cliente.
+    -- Representa a localização geográfica do cliente
+    -- e define a granularidade da análise apresentada no resultado final.
+    tabela_cliente.estado_cliente,
+    -- Cálculo do custo total dos produtos por estado.
+    -- A função SUM realiza a agregação dos custos dos produtos associados aos pedidos.
+    -- O CASE WHEN aplica uma regra condicional antes da agregação:
+    --   • Para clientes do estado 'SP', o custo do produto recebe um acréscimo de 10%.
+    --   • Para os demais estados, o custo do produto permanece inalterado.
+    -- O ROUND é utilizado para arredondar o valor final
+    -- para duas casas decimais, padrão comum em relatórios financeiros.
+    ROUND(
+        SUM(
+            CASE
+                WHEN tabela_cliente.estado_cliente = 'SP'
+                    THEN tabela_produto.custo * 1.10
+                ELSE
+                    tabela_produto.custo
+            END
+        ),
+        2
+    ) AS custo_total,
+    -- Criação de uma coluna indicativa de regra aplicada.
+    -- Este CASE avalia o estado do cliente e classifica o registro como:
+    --   • 'Com Aumento de Custo' quando o estado for 'SP'
+    --   • 'Sem Aumento de Custo' para os demais estados
+    -- A coluna serve como um rótulo descritivo para uso em relatórios ou dashboards.
+    CASE
+        WHEN tabela_cliente.estado_cliente = 'SP'
+            THEN 'Com Aumento de Custo'
+        ELSE
+            'Sem Aumento de Custo'
+    END AS status_aumento
+FROM cap10.clientes AS tabela_cliente
+    -- Tabela de clientes.
+    -- Contém os dados cadastrais dos clientes,
+    -- incluindo o estado utilizado na agregação e nas regras condicionais.
+INNER JOIN cap10.pedidos AS tabela_pedido
+    -- Junção entre clientes e pedidos.
+    -- O INNER JOIN garante que apenas clientes
+    -- que possuem pedidos registrados
+    -- sejam considerados na consulta.
+    ON tabela_cliente.id_cli = tabela_pedido.id_cliente
+INNER JOIN cap10.produtos AS tabela_produto
+    -- Junção entre pedidos e produtos.
+    -- Permite acessar as informações dos produtos,
+    -- especialmente o custo utilizado no cálculo agregado.
+    ON tabela_pedido.id_produto = tabela_produto.id_prod
+WHERE
+    -- Filtro aplicado sobre o nome dos produtos.
+    -- O operador LIKE com o curinga '%' permite
+    -- a busca por ocorrências parciais no texto.
+    -- Apenas produtos cujo nome contenha
+    -- 'Apache' ou 'Análise' serão considerados na análise.
+    tabela_produto.nome_produto LIKE '%Apache%'
+    OR tabela_produto.nome_produto LIKE '%Análise%'
+GROUP BY
+    -- Agrupamento dos registros.
+    -- Os dados são agrupados pelo estado do cliente
+    -- e pela coluna derivada status_aumento,
+    -- conforme definido na cláusula SELECT.
+    tabela_cliente.estado_cliente,
+    status_aumento
+HAVING
+    -- Filtro aplicado após a agregação dos dados.
+    -- Mantém apenas os grupos cujo custo total agregado dos produtos
+    -- esteja dentro do intervalo especificado:
+    -- maior que 150000 e menor que 250000.
+    SUM(tabela_produto.custo) > 150000
+    AND SUM(tabela_produto.custo) < 250000
+ORDER BY
+    -- Ordena o resultado final com base no custo total calculado,
+    -- do maior para o menor valor.
+    custo_total DESC;
+
 
