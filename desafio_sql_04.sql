@@ -290,4 +290,139 @@ ORDER BY
     -- Facilita a identificação dos estados com maior impacto de custo.
     custo_total DESC;
 
+/*--------------------------------------------------------------------------------------------
+Exercício 8 — Custo total dos pedidos por estado com produtos específicos
+
+Enunciado:
+Qual é o custo total dos pedidos por estado considerando apenas
+produtos cujo título contenha as palavras 'Análise' ou 'Apache'?
+
+Interpretação Analítica:
+- Pedidos são a tabela fato da análise
+- Estado do cliente é a dimensão de agrupamento
+- Produtos devem ser filtrados pelo nome (título)
+- A filtragem deve considerar títulos que contenham:
+  - 'Análise'
+  - 'Apache'
+- Métrica principal: soma do custo/valor dos pedidos
+- A lógica de filtro deve ser aplicada via WHERE
+--------------------------------------------------------------------------------------------*/
+
+-- Seleciona o estado do cliente e o nome do produto,
+-- que serão as dimensões da análise
+select    
+    tabela_cliente.estado_cliente,
+    -- Soma o custo dos produtos vendidos,
+    -- gerando a métrica analítica de custo total
+    sum(tabela_produto.custo) as custo_total
+-- Define a tabela de clientes como ponto de partida da análise
+-- Clientes representam a dimensão geográfica (estado)
+from cap10.clientes as tabela_cliente
+-- Realiza o relacionamento entre clientes e pedidos
+-- Garante que apenas clientes com pedidos sejam considerados
+-- Relação típica N:1 (muitos pedidos para um cliente)
+inner join cap10.pedidos as tabela_pedido
+    on tabela_cliente.id_cli = tabela_pedido.id_cliente
+-- Realiza o relacionamento entre pedidos e produtos
+-- Associa cada pedido ao produto correspondente
+inner join cap10.produtos as tabela_produto
+    on tabela_pedido.id_produto = tabela_produto.id_prod
+-- Aplica filtro textual nos produtos
+-- O operador ~ indica correspondência por expressão regular (PostgreSQL)
+-- Serão considerados apenas produtos cujo nome contenha:
+-- 'Apache' OU 'Análise'
+where
+    tabela_produto.nome_produto ~ 'Apache'
+    or tabela_produto.nome_produto ~ 'Análise'
+-- Agrupa os dados pelas dimensões selecionadas
+-- Cada linha do resultado representa:
+-- um estado + um produto
+group by
+    tabela_cliente.estado_cliente
+-- Ordena o resultado pelo custo total em ordem decrescente
+-- Facilita análises de ranking e priorização de custos
+order by
+    custo_total desc;
+
+/*--------------------------------------------------------------------------------------------
+Exercício 9 — Custo total dos pedidos por estado com regras de negócio
+
+Enunciado:
+Qual é o custo total dos pedidos por estado considerando apenas
+produtos cujo título contenha as palavras 'Análise' ou 'Apache',
+somente quando o custo total for menor que 120.000?
+Além disso, como demonstrar no relatório um aumento de 10% no custo
+para pedidos realizados por clientes do estado de São Paulo (SP),
+sem modificar os dados na tabela?
+
+Interpretação Analítica:
+- Pedidos são a tabela fato da análise
+- Estado do cliente é a dimensão de agrupamento
+- Produtos devem ser filtrados pelo nome (título)
+- Considerar apenas produtos cujo título contenha 'Análise' ou 'Apache'
+- A condição de custo total (< 120000) deve ser aplicada após a agregação
+- O aumento de 10% no custo deve ser calculado somente no momento da consulta
+- Os dados físicos da tabela não devem ser alterados
+--------------------------------------------------------------------------------------------*/
+
+SELECT
+    -- Estado do cliente.
+    -- Representa a localização geográfica do cliente
+    -- e define o nível de agregação dos dados apresentados no resultado.
+    tabela_cliente.estado_cliente,
+    -- Cálculo do custo total dos produtos por estado.
+    -- A função SUM agrega os custos dos produtos associados aos pedidos.
+    -- O CASE WHEN aplica uma regra condicional antes da agregação:
+    --   • Para clientes do estado 'SP', o custo do produto recebe um acréscimo de 10%.
+    --   • Para os demais estados, o custo permanece inalterado.
+    -- O ROUND é utilizado para arredondar o valor final
+    -- para duas casas decimais, padrão comum em relatórios financeiros.
+    ROUND(
+        SUM(
+            CASE
+                WHEN tabela_cliente.estado_cliente = 'SP'
+                    THEN tabela_produto.custo * 1.10
+                ELSE
+                    tabela_produto.custo
+            END
+        ),
+        2
+    ) AS custo_total
+FROM cap10.clientes AS tabela_cliente
+    -- Tabela de clientes.
+    -- Fornece os dados cadastrais dos clientes,
+    -- incluindo o estado utilizado na agregação.
+INNER JOIN cap10.pedidos AS tabela_pedido
+    -- Junção entre clientes e pedidos.
+    -- O INNER JOIN garante que apenas clientes
+    -- que possuem pedidos sejam considerados.
+    ON tabela_cliente.id_cli = tabela_pedido.id_cliente
+INNER JOIN cap10.produtos AS tabela_produto
+    -- Junção entre pedidos e produtos.
+    -- Permite acessar os dados dos produtos,
+    -- especialmente o custo utilizado no cálculo da soma.
+    ON tabela_pedido.id_produto = tabela_produto.id_prod
+WHERE
+    -- Filtro aplicado sobre o nome dos produtos.
+    -- O operador LIKE com '%' permite buscar ocorrências parciais
+    -- dentro do texto do nome do produto.
+    -- Serão considerados apenas produtos cujo nome contenha
+    -- 'Apache' ou 'Análise'.
+    tabela_produto.nome_produto LIKE '%Apache%'
+    OR tabela_produto.nome_produto LIKE '%Análise%'
+GROUP BY
+    -- Agrupamento dos registros por estado do cliente.
+    -- Necessário para o uso da função de agregação SUM
+    -- na coluna de custo.
+    tabela_cliente.estado_cliente
+HAVING
+    -- Filtro aplicado após a agregação.
+    -- Mantém apenas os grupos (estados)
+    -- cujo custo total agregado dos produtos
+    -- seja inferior a 120000.
+    SUM(tabela_produto.custo) < 120000
+ORDER BY
+    -- Ordena o resultado final pelo custo total calculado,
+    -- do maior para o menor valor.
+    custo_total DESC;
 
