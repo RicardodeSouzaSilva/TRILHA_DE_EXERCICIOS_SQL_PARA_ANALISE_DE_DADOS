@@ -609,4 +609,163 @@ ORDER BY
     -- do maior para o menor valor.
     custo_total DESC;
 
+/*--------------------------------------------------------------------------------------------
+Exercício 12 — Faturamento total por ano e total geral
+
+Enunciado:
+Qual é o faturamento total por ano e qual é o faturamento total geral,
+considerando todos os pedidos registrados na base?
+
+Interpretação Analítica:
+- Pedidos são a tabela fato da análise
+- A data do pedido define a dimensão temporal (ano)
+- A métrica principal é o faturamento total (soma do valor dos pedidos)
+- O relatório deve apresentar:
+  - o faturamento agregado por ano
+  - o faturamento total geral (todos os anos)
+- A solução deve ser construída apenas com SQL (sem alterar dados)
+--------------------------------------------------------------------------------------------*/
+
+SELECT
+    -- A coluna "ano" representa o ano da venda.
+    -- A função TO_CHAR converte o valor do ano para texto,
+    -- permitindo combinar valores numéricos com texto.
+    -- O COALESCE substitui valores NULL pelo texto 'total'.
+    -- Esse NULL ocorre na linha de totalização criada pelo ROLLUP.
+    COALESCE(TO_CHAR(ano, '9999'), 'total') AS ano,
+    -- A função SUM realiza a agregação do faturamento.
+    -- Calcula o total de faturamento por ano
+    -- e também o total geral (linha criada pelo ROLLUP).
+    SUM(faturamento) AS faturamento_total
+-- A tabela cap10.vendas contém os registros de vendas
+-- com informações de ano e faturamento.
+FROM cap10.vendas
+-- O GROUP BY com ROLLUP cria múltiplos níveis de agregação:
+--  • Total por ano
+--  • Total geral (todas as linhas somadas)
+-- Na linha de total geral, a coluna "ano" assume valor NULL.
+GROUP BY ROLLUP (ano)
+-- Ordena o resultado pela coluna "ano".
+-- Os anos aparecem ordenados e a linha de total
+-- é posicionada conforme a ordenação textual.
+ORDER BY ano;
+    
+/*--------------------------------------------------------------------------------------------
+Exercício 12 — Faturamento total por ano, país e total geral (ROLLUP)
+
+Enunciado:
+Qual é o faturamento total por ano e por país, e qual é o faturamento
+total geral considerando todos os pedidos registrados na base?
+O relatório deve apresentar os totais detalhados e os subtotais,
+incluindo o total geral, utilizando ROLLUP.
+
+Interpretação Analítica:
+- Pedidos são a tabela fato da análise
+- A data do pedido define a dimensão temporal (ano)
+- O país define a dimensão geográfica
+- A métrica principal é o faturamento total (soma do valor dos pedidos)
+- O relatório deve conter:
+  - faturamento por ano e país
+  - subtotais por ano
+  - total geral consolidado
+- O uso de ROLLUP permite gerar automaticamente os níveis de agregação
+- A solução deve ser construída apenas com SQL (sem alterar dados)
+--------------------------------------------------------------------------------------------*/
+
+SELECT
+    -- A coluna "ano" representa o ano da venda.
+    -- A função TO_CHAR converte o valor numérico do ano para texto,
+    -- permitindo combinar valores numéricos com textos descritivos.
+    -- O COALESCE substitui valores NULL pelo texto
+    -- 'Soma Total Faturamento Ano'.
+    -- O NULL ocorre nas linhas de subtotal e total criadas pelo ROLLUP.
+    COALESCE(TO_CHAR(ano, '9999'),'Soma Total Faturamento Ano') AS ano,
+    -- A coluna "pais" representa o país associado à venda.
+    -- O COALESCE substitui valores NULL pelo texto
+    -- 'Soma Faturamento Paises'.
+    -- O NULL aparece nas linhas onde o ROLLUP gera
+    -- totais agregados acima do nível de país.
+    COALESCE(pais, 'Subtotal Paises') AS pais,
+    -- A função SUM agrega o valor de faturamento.
+    -- Calcula:
+    --   • O faturamento por ano e país
+    --   • O faturamento total por ano
+    --   • O faturamento total geral
+    SUM(faturamento) AS faturamento_total
+-- A tabela cap10.vendas contém os registros de vendas,
+-- incluindo ano, país e valor de faturamento.
+FROM cap10.vendas
+-- O GROUP BY com ROLLUP cria múltiplos níveis de agregação:
+--   • (ano, pais) → detalhamento por ano e país
+--   • (ano)       → subtotal por ano
+--   • ()          → total geral
+-- Nas linhas de subtotal e total, as colunas "ano" e/ou "pais"
+-- assumem valor NULL.
+GROUP BY ROLLUP (ano, pais)
+-- Ordena o resultado primeiro pelo ano
+-- e depois pelo país, mantendo uma hierarquia
+-- clara no relatório.
+ORDER BY ano, pais;
+
+
+/*--------------------------------------------------------------------------------------------
+Exercício 13 — Faturamento total por ano, país e totais gerais (CUBE)
+
+Enunciado:
+Qual é o faturamento total por ano e por país, bem como todos os
+totais gerais possíveis considerando essas dimensões?
+O relatório deve apresentar:
+- faturamento por ano e país
+- total por ano (todos os países)
+- total por país (todos os anos)
+- total geral consolidado
+utilizando a cláusula CUBE.
+
+Interpretação Analítica:
+- Pedidos são a tabela fato da análise
+- A data do pedido define a dimensão temporal (ano)
+- O país define a dimensão geográfica
+- A métrica principal é o faturamento total (soma do valor dos pedidos)
+- O uso de CUBE gera automaticamente todas as combinações de agregação
+- O relatório deve conter totais detalhados e consolidados
+- A solução deve ser construída apenas com SQL (sem alterar os dados)
+--------------------------------------------------------------------------------------------*/
+
+SELECT
+    -- A coluna "ano" representa o ano da venda.
+    -- A função TO_CHAR converte o valor numérico do ano para texto,
+    -- permitindo combinar valores numéricos com textos descritivos.
+    -- O COALESCE substitui valores NULL pelo texto
+    -- 'Soma Total Faturamento Ano'.
+    -- O valor NULL ocorre nas linhas de subtotal e total
+    -- criadas pelo uso do CUBE.
+    COALESCE(TO_CHAR(ano, '9999'), 'Soma Total Faturamento Ano') AS ano,
+    -- A coluna "pais" representa o país associado à venda.
+    -- O COALESCE substitui valores NULL pelo texto
+    -- 'Subtotal Paises'.
+    -- O NULL aparece nas linhas onde o CUBE gera
+    -- níveis de agregação acima do detalhamento por país.
+    COALESCE(pais, 'Subtotal Paises') AS pais,
+	-- A função SUM realiza a agregação do faturamento.
+    -- Calcula o faturamento considerando todos os níveis
+    -- de agregação gerados pelo CUBE.
+    SUM(faturamento) AS faturamento_total
+-- A tabela cap10.vendas contém os registros de vendas,
+-- incluindo informações de ano, país e valor de faturamento.
+FROM cap10.vendas
+-- O GROUP BY com CUBE cria todas as combinações possíveis
+-- de agregação entre as colunas informadas:
+--   • (ano, pais) → detalhamento completo
+--   • (ano)       → subtotal por ano
+--   • (pais)      → subtotal por país
+--   • ()          → total geral
+-- Nos níveis de subtotal e total, as colunas "ano" e/ou "pais"
+-- assumem valor NULL.
+GROUP BY CUBE (ano, pais)
+-- Ordena o resultado primeiro pelo ano
+-- e depois pelo país, mantendo uma organização
+-- hierárquica e legível do relatório.
+ORDER BY ano, pais;
+
+
 
